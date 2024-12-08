@@ -1,115 +1,80 @@
-import { ChevronDown } from 'lucide-react';
-
-interface FilterSidebarProps {
-  show: boolean;
-}
-
 const FilterSidebar = () => {
   return (
-    <div className="space-y-6">
-      {/* Bundle Type */}
+    <div className="w-full">
       <div>
-        <h3 className="font-medium text-[#303030] mb-4">Bundle Type</h3>
-        <div className="space-y-3">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Duo Kits</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Trio Sets</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Value Packs</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Gift Sets</span>
-          </label>
+        {/* Price Filter */}
+        <div className="mb-8">
+          <h4 className="text-sm font-medium mb-3 text-[#666666]">Price Range</h4>
+          <div className="space-y-2">
+            {[
+              '₱0 - ₱500 (3)',
+              '₱501 - ₱1,000 (5)',
+              '₱1,001 - ₱1,500 (4)',
+              '₱1,501 - ₱2,000 (2)',
+              '₱2,000+ (1)'
+            ].map((range) => (
+              <label key={range} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="rounded border-gray-300 text-[#779B78] focus:ring-[#779B78]" />
+                <span className="text-sm text-[#666666]">{range}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Skin Concern */}
-      <div>
-        <h3 className="font-medium text-[#303030] mb-4">Skin Concern</h3>
-        <div className="space-y-3">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Brightening</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Anti-Aging</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Hydration</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Acne Control</span>
-          </label>
+        {/* Bundle Type Filter */}
+        <div className="mb-8">
+          <h4 className="text-sm font-medium mb-3 text-[#666666]">Bundle Type</h4>
+          <div className="space-y-2">
+            {[
+              'Skincare Sets (8)',
+              'Value Sets (5)',
+              'Gift Sets (4)',
+              'Travel Sets (3)',
+              'Limited Edition (2)'
+            ].map((type) => (
+              <label key={type} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="rounded border-gray-300 text-[#779B78] focus:ring-[#779B78]" />
+                <span className="text-sm text-[#666666]">{type}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Price Range */}
-      <div>
-        <h3 className="font-medium text-[#303030] mb-4">Price Range</h3>
-        <div className="space-y-3">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Under ₱1,000</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">₱1,000 - ₱2,000</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">₱2,000 - ₱3,000</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">Over ₱3,000</span>
-          </label>
+        {/* Discount Range Filter */}
+        <div className="mb-8">
+          <h4 className="text-sm font-medium mb-3 text-[#666666]">Discount Range</h4>
+          <div className="space-y-2">
+            {[
+              '10% - 20% Off (6)',
+              '21% - 30% Off (4)',
+              '31% - 40% Off (3)',
+              '41% - 50% Off (2)',
+              'Over 50% Off (1)'
+            ].map((range) => (
+              <label key={range} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="rounded border-gray-300 text-[#779B78] focus:ring-[#779B78]" />
+                <span className="text-sm text-[#666666]">{range}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Discount */}
-      <div>
-        <h3 className="font-medium text-[#303030] mb-4">Discount</h3>
+        {/* Filter Buttons */}
         <div className="space-y-3">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">20% Off</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">30% Off</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">40% Off</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300 text-[#FF66C4] focus:ring-[#FF66C4]" />
-            <span className="text-sm text-gray-600">50% Off & More</span>
-          </label>
+          <button 
+            className="w-full py-2 text-white font-semibold bg-[#779B78] hover:bg-white hover:text-[#779B78] border border-transparent hover:border-[#779B78] transition-all duration-200 rounded-none text-sm tracking-wide"
+          >
+            Apply Filters
+          </button>
+          <button 
+            className="w-full py-2 text-[#779B78] font-semibold bg-white hover:bg-[#779B78] hover:text-white border border-[#779B78] transition-all duration-200 rounded-none text-sm tracking-wide"
+          >
+            Clear All
+          </button>
         </div>
-      </div>
-
-      {/* Clear & Apply Buttons */}
-      <div className="flex gap-2 pt-4">
-        <button className="flex-1 px-4 py-2 border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 rounded">
-          Clear All
-        </button>
-        <button className="flex-1 px-4 py-2 bg-[#FF66C4] text-white text-sm hover:bg-[#ff4db8] rounded">
-          Apply
-        </button>
       </div>
     </div>
   );
 };
 
-export default FilterSidebar; 
+export default FilterSidebar;

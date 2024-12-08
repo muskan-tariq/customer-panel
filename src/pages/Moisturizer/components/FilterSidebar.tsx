@@ -87,4 +87,4 @@ const FilterSidebar = () => {
   );
 };
 
-export default FilterSidebar; 
+export default FilterSidebar;

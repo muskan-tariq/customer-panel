@@ -105,4 +105,4 @@ const RecentlyViewed = () => {
   );
 };
 
-export default RecentlyViewed; 
+export default RecentlyViewed;

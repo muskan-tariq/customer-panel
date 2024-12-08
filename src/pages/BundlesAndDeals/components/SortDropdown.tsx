@@ -54,4 +54,4 @@ const SortDropdown = ({ value, onChange }: SortDropdownProps) => {
   );
 };
 
-export default SortDropdown; 
+export default SortDropdown;

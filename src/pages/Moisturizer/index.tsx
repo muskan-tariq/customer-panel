@@ -101,4 +101,4 @@ const MoisturizerPage = () => {
   );
 };
 
-export default MoisturizerPage; 
+export default MoisturizerPage;
