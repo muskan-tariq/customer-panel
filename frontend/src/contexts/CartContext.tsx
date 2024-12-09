@@ -8,86 +8,136 @@ interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  category?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  total: number;
   totalItems: number;
+  totalPrice: number;
+  isCartOpen: boolean;
+  orderNote: string;
+  isLoading: boolean;
   addItem: (item: CartItem) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   updateQuantity: (id: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
   setIsCartOpen: (isOpen: boolean) => void;
-  applyDiscount: (code: string) => Promise<void>;
-  isLoading: boolean;
+  setOrderNote: (note: string) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const CART_STORAGE_KEY = 'tuffy_cart';
+const NOTE_STORAGE_KEY = 'tuffy_cart_note';
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+  
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [totalItems, setTotalItems] = useState(0);
+  const [orderNote, setOrderNote] = useState(() => {
+    const savedNote = localStorage.getItem(NOTE_STORAGE_KEY);
+    return savedNote || '';
+  });
 
-  useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        console.log('Fetching cart...');
-        const token = localStorage.getItem('token');
-        console.log('Token:', token ? 'exists' : 'missing');
+  // Calculate totals
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        if (!token) {
-          setIsLoading(false);
-          return;
-        }
-
-        const response = await axios.get(`${API_URL}/cart`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('Cart response:', response.data);
-
-        setItems(response.data.items || []);
-        setTotal(response.data.total || 0);
-      } catch (error) {
-        console.error('Cart fetch error:', error);
-      } finally {
+  // Fetch cart from backend
+  const fetchCart = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
         setIsLoading(false);
+        return;
       }
-    };
 
+      const response = await axios.get(`${API_URL}/cart`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const cartItems = response.data.items.map((item: any) => ({
+        id: item.product._id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        image: item.product.images[0],
+        category: item.product.category
+      }));
+
+      setItems(cartItems);
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      // Fallback to localStorage if API fails
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+      if (savedCart) {
+        setItems(JSON.parse(savedCart));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
     fetchCart();
   }, []);
 
+  // Save cart to localStorage whenever it changes
   useEffect(() => {
-    const newTotalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-    setTotalItems(newTotalItems);
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
-  const addItem = async (item: CartItem) => {
+  // Save order note to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(NOTE_STORAGE_KEY, orderNote);
+  }, [orderNote]);
+
+  const addItem = async (newItem: CartItem) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Please login to add items to cart');
 
-      await axios.post(`${API_URL}/cart/items`, item, {
+      await axios.post(`${API_URL}/cart/items`, {
+        productId: newItem.id,
+        quantity: newItem.quantity
+      }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       await fetchCart();
-      setIsOpen(true);
+      setIsCartOpen(true);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to add item to cart');
+      console.error('Error adding to cart:', error);
+      // Fallback to localStorage if API fails
+      setItems(currentItems => {
+        const existingItem = currentItems.find(item => item.id === newItem.id);
+        
+        if (existingItem) {
+          return currentItems.map(item =>
+            item.id === newItem.id
+              ? { ...item, quantity: item.quantity + newItem.quantity }
+              : item
+          );
+        }
+        
+        return [...currentItems, newItem];
+      });
+      setIsCartOpen(true);
+      throw error;
     }
   };
 
   const removeItem = async (id: string) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) throw new Error('Not authenticated');
+      if (!token) throw new Error('Please login to remove items from cart');
 
       await axios.delete(`${API_URL}/cart/items/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -95,14 +145,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       await fetchCart();
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to remove item');
+      console.error('Error removing from cart:', error);
+      // Fallback to localStorage if API fails
+      setItems(currentItems => currentItems.filter(item => item.id !== id));
+      throw error;
     }
   };
 
   const updateQuantity = async (id: string, quantity: number) => {
+    if (quantity <= 0) {
+      await removeItem(id);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
-      if (!token) throw new Error('Not authenticated');
+      if (!token) throw new Error('Please login to update cart');
 
       await axios.put(`${API_URL}/cart/items/${id}`, 
         { quantity },
@@ -111,56 +169,55 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       await fetchCart();
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to update quantity');
+      console.error('Error updating quantity:', error);
+      // Fallback to localStorage if API fails
+      setItems(currentItems =>
+        currentItems.map(item =>
+          item.id === id ? { ...item, quantity } : item
+        )
+      );
+      throw error;
     }
   };
 
   const clearCart = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) throw new Error('Not authenticated');
+      if (!token) throw new Error('Please login to clear cart');
 
       await axios.delete(`${API_URL}/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setItems([]);
-      setTotal(0);
+      setOrderNote('');
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(NOTE_STORAGE_KEY);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to clear cart');
-    }
-  };
-
-  const applyDiscount = async (code: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('Not authenticated');
-
-      await axios.post(`${API_URL}/cart/discount`,
-        { code },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      await fetchCart();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to apply discount');
+      console.error('Error clearing cart:', error);
+      // Fallback to localStorage if API fails
+      setItems([]);
+      setOrderNote('');
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(NOTE_STORAGE_KEY);
+      throw error;
     }
   };
 
   return (
     <CartContext.Provider value={{
       items,
-      total,
       totalItems,
+      totalPrice,
+      isCartOpen,
+      orderNote,
+      isLoading,
       addItem,
       removeItem,
       updateQuantity,
       clearCart,
-      isOpen,
-      setIsOpen,
-      setIsCartOpen: setIsOpen,
-      applyDiscount,
-      isLoading
+      setIsCartOpen,
+      setOrderNote
     }}>
       {children}
     </CartContext.Provider>

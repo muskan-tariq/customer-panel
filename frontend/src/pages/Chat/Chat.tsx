@@ -9,17 +9,17 @@ import Picker from '@emoji-mart/react';
 
 const Chat = () => {
   const { user } = useAuth();
-  const { chats, currentChat, messages, setCurrentChat, sendMessage, startNewChat } = useChat();
+  const { chats, currentChat, messages, setCurrentChat, sendMessage, startNewChat, deleteChat } = useChat();
   const [newMessage, setNewMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim()) {
-      sendMessage(newMessage.trim());
+      await sendMessage(newMessage.trim());
       setNewMessage('');
     }
   };
@@ -35,6 +35,17 @@ const Chat = () => {
       setShowNewChatDialog(false);
       setSelectedProduct('');
     }
+  };
+
+  const handleDeleteChat = () => {
+    if (currentChat) {
+      deleteChat(currentChat.id);
+      setAnchorEl(null);
+    }
+  };
+
+  const handleSwitchChat = (chat: any) => {
+    setCurrentChat(chat);
   };
 
   return (
@@ -70,7 +81,7 @@ const Chat = () => {
                   '&:hover': { bgcolor: 'rgba(255, 102, 196, 0.05)' },
                   py: 1
                 }}
-                onClick={() => setCurrentChat(chat)}
+                onClick={() => handleSwitchChat(chat)}
               >
                 <ListItemAvatar>
                   <Badge
@@ -147,11 +158,7 @@ const Chat = () => {
                 open={Boolean(anchorEl)}
                 onClose={() => setAnchorEl(null)}
               >
-                <MenuItem onClick={() => setAnchorEl(null)}>
-                  <ArchiveIcon fontSize="small" sx={{ mr: 1 }} />
-                  <Typography variant="body2">Archive Chat</Typography>
-                </MenuItem>
-                <MenuItem onClick={() => setAnchorEl(null)}>
+                <MenuItem onClick={handleDeleteChat}>
                   <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
                   <Typography variant="body2">Delete Chat</Typography>
                 </MenuItem>

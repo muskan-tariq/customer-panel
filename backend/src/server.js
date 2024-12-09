@@ -14,6 +14,7 @@ const cartRoutes = require('./routes/cartRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -27,12 +28,28 @@ app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse JSON bodies
 app.use(morgan('dev')); // HTTP request logger
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting configurations
+const standardLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 });
-app.use(limiter);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50 // Stricter limit for auth routes
+});
+
+const checkoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300 // More lenient limit for checkout process
+});
+
+// Apply rate limiting to different routes
+app.use('/api/auth', authLimiter); // Stricter limit for auth routes
+app.use('/api/orders', checkoutLimiter); // More lenient for checkout
+app.use('/api/payment', checkoutLimiter); // More lenient for payment
+app.use('/api/cart', checkoutLimiter); // More lenient for cart operations
+app.use(standardLimiter); // Apply standard limit to all other routes
 
 // File size limit for uploads
 app.use(express.json({ limit: '10mb' }));
@@ -51,6 +68,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/email', emailRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

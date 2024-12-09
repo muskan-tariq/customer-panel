@@ -66,7 +66,8 @@ const BestSellers = () => {
             >
               <div className="relative mb-3">
                 {/* Discount Tag */}
-                {product.discount > 0 && (
+                               {/* Discount Tag */}
+                               {product.discount && product.discount > 0 && (
                   <span className="absolute top-2 left-2 bg-white text-black text-[10px] px-1.5 py-0.5 z-10">
                     {product.discount}% OFF
                   </span>

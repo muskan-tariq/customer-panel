@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 interface CartItem {
   id: string;
@@ -10,7 +10,7 @@ interface CartItem {
 
 interface OrderSummaryProps {
   items: CartItem[];
-  total: number;
+  total?: number;
   loading: boolean;
   error: string;
   onPlaceOrder: () => void;
@@ -19,13 +19,20 @@ interface OrderSummaryProps {
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
   items,
-  total,
+  total: providedTotal,
   loading,
   error,
   onPlaceOrder,
   disabled
 }) => {
   const deliveryFee = 100; // ₱100 delivery fee
+
+  // Calculate total from items if not provided
+  const subtotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  }, [items]);
+
+  const total = providedTotal ?? subtotal;
   const finalTotal = total + deliveryFee;
 
   return (

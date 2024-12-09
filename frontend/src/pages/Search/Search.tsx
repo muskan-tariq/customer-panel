@@ -1,37 +1,46 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Grid, Grid3x3, Filter } from 'lucide-react';
+import { Grid, Grid3x3 } from 'lucide-react';
 import ProductGrid from '../../components/ProductGrid';
 import Pagination from '../../components/Pagination';
 import { useSearch } from '../../hooks/useSearch';
-import FilterSidebar from './components/FilterSidebar';
 import SortDropdown from './components/SortDropdown';
 
 const SearchPage = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [viewType, setViewType] = useState<'grid4' | 'grid5'>('grid4');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [columns, setColumns] = React.useState(4);
 
   const { 
     results, 
     loading, 
     error, 
-    pagination, 
-    filterOptions,
+    pagination,
     setPage,
-    applyFilters,
     sortResults 
   } = useSearch(query);
-
-  const handleApplyFilters = (filters: any) => {
-    applyFilters(filters);
-    setIsFilterOpen(false);
-  };
 
   const handleSort = (sortBy: string) => {
     sortResults(sortBy);
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF66C4]"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -48,113 +57,53 @@ const SearchPage = () => {
         <div className="h-0.5 bg-gray-200 w-full"></div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative">
-        {/* Sort and View Options */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
-            >
-              <Filter className="h-4 w-4" />
-              Filter
-            </button>
-            <SortDropdown value="featured" onChange={handleSort} />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewType('grid4')}
-              className={`p-2 rounded ${
-                viewType === 'grid4'
-                  ? 'text-[#779B78]'
-                  : 'text-gray-600'
-              }`}
-            >
-              <Grid className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewType('grid5')}
-              className={`p-2 rounded ${
-                viewType === 'grid5'
-                  ? 'text-[#779B78]'
-                  : 'text-gray-600'
-              }`}
-            >
-              <Grid3x3 className="h-5 w-5" />
-            </button>
-          </div>
+      {/* Toolbar */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">View:</span>
+          <button
+            onClick={() => setColumns(4)}
+            className={`p-1.5 rounded ${columns === 4 ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+            aria-label="4 columns grid"
+          >
+            <Grid className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setColumns(5)}
+            className={`p-1.5 rounded ${columns === 5 ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+            aria-label="5 columns grid"
+          >
+            <Grid3x3 className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Filter Sidebar Drawer */}
-        {isFilterOpen && (
-          <>
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
-              onClick={() => setIsFilterOpen(false)}
-            ></div>
-            
-            {/* Drawer */}
-            <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-lg z-50 overflow-y-auto">
-              <div className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-[#666666]">Filters</h3>
-                  <button 
-                    onClick={() => setIsFilterOpen(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <FilterSidebar 
-                  onApply={handleApplyFilters}
-                  filterOptions={filterOptions}
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Loading State */}
-        {loading && (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#779B78]"></div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="text-center text-red-500 py-8">
-            {error}
-          </div>
-        )}
-
-        {/* No Results */}
-        {!loading && !error && results.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
-            No products found for "{query}"
-          </div>
-        )}
-
-        {/* Products Grid */}
-        {!loading && !error && results.length > 0 && (
-          <>
-            <ProductGrid products={results} viewType={viewType} />
-            
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="mt-8">
-                <Pagination
-                  currentPage={pagination.currentPage}
-                  totalPages={pagination.totalPages}
-                  onPageChange={setPage}
-                />
-              </div>
-            )}
-          </>
-        )}
+        <SortDropdown onSort={handleSort} />
       </div>
+
+      {/* Results */}
+      {results.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No products found for "{query}"</p>
+        </div>
+      ) : (
+        <>
+          <ProductGrid 
+            products={results} 
+            columns={columns}
+            isSearchResult={true}
+          />
+          
+          {pagination.totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

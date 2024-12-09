@@ -38,8 +38,12 @@ const orderSchema = new mongoose.Schema({
   },
   total: Number,
   discount: {
-    code: String,
-    amount: Number
+    type: {
+      code: String,
+      amount: Number
+    },
+    required: false,
+    default: null
   },
   deliveryFee: Number
 }, { timestamps: true });

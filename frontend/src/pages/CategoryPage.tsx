@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { useProducts, FilterOptions } from '../../hooks/useProducts';
-import ProductGrid from '../../components/ProductGrid';
-import Pagination from '../../components/Pagination';
-import FilterSidebar from '../BestSellers/components/FilterSidebar';
+import { useProducts, FilterOptions } from '../hooks/useProducts';
+import ProductGrid from '../components/ProductGrid';
+import Pagination from '../components/Pagination';
+import FilterSidebar from './BestSellers/components/FilterSidebar';
 import { Grid, Grid3x3, Menu, X } from 'lucide-react';
 
-const BundlesAndDealsPage = () => {
+interface CategoryPageProps {
+  category: string;
+  title: string;
+}
+
+const CategoryPage: React.FC<CategoryPageProps> = ({ category, title }) => {
   const [viewType, setViewType] = useState<'grid4' | 'grid5'>('grid4');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -13,12 +18,12 @@ const BundlesAndDealsPage = () => {
     products,
     loading,
     error,
-    pagination,
-    setPage,
+    pagination, 
+    setPage, 
     applyFilters,
     filterOptions,
-    sortOptions
-  } = useProducts('bundles');
+    sortOptions 
+  } = useProducts(category);
 
   const handleApplyFilters = (filters: FilterOptions) => {
     applyFilters(filters);
@@ -49,9 +54,8 @@ const BundlesAndDealsPage = () => {
       <div className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto text-center">
-            <h2 className="text-2xl font-medium text-gray-900 mb-4">
-              {error}
-            </h2>
+            <h2 className="text-2xl font-medium text-gray-900 mb-4">Oops!</h2>
+            <p className="text-gray-500 mb-8">{error}</p>
           </div>
         </div>
       </div>
@@ -64,7 +68,7 @@ const BundlesAndDealsPage = () => {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl font-medium mb-2">Bundles & Deals</h1>
+            <h1 className="text-2xl font-medium mb-2">{title}</h1>
             <div className="h-0.5 bg-gray-200 w-full"></div>
           </div>
 
@@ -136,26 +140,20 @@ const BundlesAndDealsPage = () => {
               </>
             )}
 
-            {products.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No bundles or deals available at the moment.</p>
+            {/* Products Grid */}
+            <div className="bg-white">
+              <ProductGrid products={products} viewType={viewType} />
+            </div>
+            
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="mt-8">
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  onPageChange={setPage}
+                />
               </div>
-            ) : (
-              <>
-                <div className="bg-white">
-                  <ProductGrid products={products} viewType={viewType} />
-                </div>
-                
-                {pagination && pagination.totalPages > 1 && (
-                  <div className="mt-8">
-                    <Pagination
-                      currentPage={pagination.currentPage}
-                      totalPages={pagination.totalPages}
-                      onPageChange={setPage}
-                    />
-                  </div>
-                )}
-              </>
             )}
           </div>
         </div>
@@ -164,4 +162,4 @@ const BundlesAndDealsPage = () => {
   );
 };
 
-export default BundlesAndDealsPage; 
+export default CategoryPage; 

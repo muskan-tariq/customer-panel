@@ -131,7 +131,7 @@ const Header = () => {
                 <MessageCircle className="h-5 w-5" />
               </Link>
               <Link
-                to="/orders" 
+                to="/account/orders" 
                 className="hover:text-primary transition-colors relative" 
                 aria-label="Order History"
               >
@@ -301,6 +301,8 @@ const Header = () => {
           </>
         )}
       </AnimatePresence>
+
+      {/* Cart Sidebar */}
       <Cart />
     </header>
   );

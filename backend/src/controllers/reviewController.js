@@ -8,13 +8,29 @@ const getProductReviews = async (req, res) => {
   try {
     const reviews = await Review.find({ 
       product: req.params.productId,
-      status: 'approved'
+      status: { $in: ['approved', 'pending'] } // Include both approved and pending reviews
     })
     .populate('user', 'name')
     .sort({ createdAt: -1 });
 
-    res.json(reviews);
+    // Format the reviews to match the frontend interface
+    const formattedReviews = reviews.map(review => ({
+      _id: review._id,
+      user: {
+        name: review.user.name
+      },
+      rating: review.rating,
+      title: review.title,
+      comment: review.comment,
+      images: review.images || [],
+      createdAt: review.createdAt,
+      helpfulVotes: review.helpfulVotes,
+      isVerifiedPurchase: review.isVerifiedPurchase
+    }));
+
+    res.json(formattedReviews);
   } catch (error) {
+    console.error('Error getting reviews:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -33,7 +49,7 @@ const createReview = async (req, res) => {
 
     // Check if user has already reviewed this product
     const existingReview = await Review.findOne({
-      user: req.user.id,
+      user: req.user.userId,
       product: productId
     });
 
@@ -43,27 +59,51 @@ const createReview = async (req, res) => {
 
     // Create the review with images
     const review = new Review({
-      user: req.user.id,
+      user: req.user.userId,
       product: productId,
       rating,
       title,
       comment,
       images: images || [],
+      status: 'approved', // Auto-approve reviews for now
       isVerifiedPurchase: false // You can update this based on your requirements
     });
 
     await review.save();
 
+    // Update product rating and review count
+    const allProductReviews = await Review.find({ 
+      product: productId,
+      status: 'approved'
+    });
+
+    const totalRating = allProductReviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = totalRating / allProductReviews.length;
+
+    product.rating = averageRating;
+    product.numReviews = allProductReviews.length;
+    await product.save();
+
     // Populate user information before sending response
     await review.populate('user', 'name');
 
+    // Get updated product data
+    const updatedProduct = await Product.findById(productId)
+      .select('rating numReviews')
+      .lean();
+
     res.status(201).json({
       success: true,
-      review
+      review,
+      product: {
+        _id: productId,
+        rating: updatedProduct.rating,
+        numReviews: updatedProduct.numReviews
+      }
     });
   } catch (error) {
     console.error('Review creation error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 

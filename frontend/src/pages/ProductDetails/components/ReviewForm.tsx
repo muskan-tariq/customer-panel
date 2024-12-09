@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 import ImageUpload from '../../../components/ImageUpload/ImageUpload';
 import { useAuth } from '../../../contexts/AuthContext';
+import { API_URL } from '../../../config/api';
+import { useProducts } from '../../../hooks/useProducts';
 
 interface ReviewFormProps {
   productId: string;
@@ -11,18 +13,31 @@ interface ReviewFormProps {
 
 const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSubmit, onClose }) => {
   const { user, token } = useAuth();
+  const { refreshProducts } = useProducts();
   const [rating, setRating] = useState(0);
   const [title, setTitle] = useState('');
   const [comment, setComment] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleImageUpload = (imageUrl: string) => {
     setImages(prev => [...prev, imageUrl]);
   };
 
+  const handleUploadStart = () => {
+    setIsUploading(true);
+    setError(''); // Clear any previous errors
+  };
+
+  const handleUploadEnd = () => {
+    setIsUploading(false);
+  };
+
   const validateForm = () => {
+    setError(''); // Clear any previous errors
+
     if (!rating) {
       setError('Please select a rating');
       return false;
@@ -35,6 +50,11 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSubmit, onClose })
 
     if (!comment.trim()) {
       setError('Please enter your review');
+      return false;
+    }
+
+    if (isUploading) {
+      setError('Please wait for image upload to complete');
       return false;
     }
 
@@ -53,19 +73,19 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSubmit, onClose })
       return;
     }
 
-    setLoading(true);
-    setError('');
-
-    const reviewData = {
-      productId,
-      rating,
-      title: title.trim(),
-      comment: comment.trim(),
-      images
-    };
-
     try {
-      const response = await fetch('http://localhost:5000/api/reviews', {
+      setLoading(true);
+      setError('');
+
+      const reviewData = {
+        productId,
+        rating,
+        title: title.trim(),
+        comment: comment.trim(),
+        images
+      };
+
+      const response = await fetch(`${API_URL}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,6 +99,18 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSubmit, onClose })
         throw new Error(errorData.message || 'Failed to submit review');
       }
 
+      const data = await response.json();
+
+      // Clear form
+      setRating(0);
+      setTitle('');
+      setComment('');
+      setImages([]);
+
+      // Refresh products to update the grid
+      await refreshProducts();
+
+      // Only close and refresh if submission was successful
       onSubmit(); // Refresh reviews list
       onClose(); // Close the form
     } catch (error: any) {
@@ -96,6 +128,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSubmit, onClose })
         <div className="p-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-medium text-gray-900">Write a Review</h2>
           <button
+            type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500"
           >
@@ -167,6 +200,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSubmit, onClose })
             </label>
             <ImageUpload
               onUploadComplete={handleImageUpload}
+              onUploadStart={handleUploadStart}
+              onUploadEnd={handleUploadEnd}
               maxImages={5}
               initialImages={images}
             />
@@ -188,14 +223,14 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSubmit, onClose })
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isUploading}
               className={`px-6 py-2 text-sm font-medium text-white rounded-md
-                ${loading
+                ${(loading || isUploading)
                   ? 'bg-pink-300 cursor-not-allowed'
                   : 'bg-[#FF66C4] hover:bg-[#ff4db7]'
                 } transition-colors duration-200`}
             >
-              {loading ? 'Submitting...' : 'Submit Review'}
+              {loading ? 'Submitting...' : isUploading ? 'Uploading Image...' : 'Submit Review'}
             </button>
           </div>
         </form>

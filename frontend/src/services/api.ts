@@ -281,27 +281,45 @@ export const fetchFilterOptions = async (category: string) => {
   }
 };
 
+// Search products
 export const searchProducts = async (
   query: string,
   page: number = 1,
-  filters: any = {},
-  sortBy: string = 'featured'
+  sortBy: string = 'featured',
+  filters: any = {}
 ) => {
   try {
-    const params = new URLSearchParams({
-      query,
-      page: page.toString(),
-      sortBy,
-      ...(filters.priceRange && { priceRange: filters.priceRange }),
-      ...(filters.skinTypes?.length && { skinTypes: filters.skinTypes.join(',') }),
-      ...(filters.concerns?.length && { concerns: filters.concerns.join(',') }),
-      ...(filters.ingredients?.length && { ingredients: filters.ingredients.join(',') })
-    });
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('query', query);
+    params.append('page', page.toString());
+    params.append('sortBy', sortBy);
 
-    const response = await axios.get(`${API_URL}/products/search?${params}`);
-    return response.data;
+    // Add filters if provided
+    if (filters.priceRange?.length) {
+      params.append('priceRange', filters.priceRange.join(','));
+    }
+    if (filters.skinTypes?.length) {
+      params.append('skinTypes', filters.skinTypes.join(','));
+    }
+    if (filters.concerns?.length) {
+      params.append('concerns', filters.concerns.join(','));
+    }
+    if (filters.ingredients?.length) {
+      params.append('ingredients', filters.ingredients.join(','));
+    }
+
+    const response = await fetch(
+      `${API_URL}/products/search?${params.toString()}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to search products');
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error('Search error:', error);
+    console.error('Error searching products:', error);
     throw error;
   }
 };

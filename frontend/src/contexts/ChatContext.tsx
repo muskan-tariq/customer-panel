@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import geminiService from '../services/geminiService';
 
 interface Message {
   id: string;
@@ -25,24 +26,27 @@ interface ChatContextType {
   currentChat: Chat | null;
   messages: Message[];
   setCurrentChat: (chat: Chat | null) => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: string) => Promise<void>;
   markAsRead: (chatId: string) => void;
   startNewChat: () => void;
   resolveChat: (chatId: string) => void;
+  deleteChat: (chatId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Load chats from localStorage
+  // Load initial chats from localStorage
   useEffect(() => {
     const savedChats = localStorage.getItem('chats');
     const savedMessages = localStorage.getItem('messages');
+    
     if (savedChats) {
       setChats(JSON.parse(savedChats));
     }
@@ -51,63 +55,70 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Save chats to localStorage when they change
+  // Save chats and messages to localStorage when they change
   useEffect(() => {
     localStorage.setItem('chats', JSON.stringify(chats));
-  }, [chats]);
-
-  useEffect(() => {
     localStorage.setItem('messages', JSON.stringify(messages));
-  }, [messages]);
+  }, [chats, messages]);
 
-  const sendMessage = (content: string) => {
+  const sendMessage = async (content: string) => {
     if (!currentChat || !user) return;
 
-    const newMessage: Message = {
-      id: Math.random().toString(36).substring(2),
-      senderId: user.id,
-      receiverId: 'seller', // In a real app, this would be the actual seller's ID
-      content,
-      timestamp: new Date().toISOString(),
-      isRead: false
-    };
-
-    setMessages(prev => [...prev, newMessage]);
-    
-    // Update last message in chat
-    setChats(prev => prev.map(chat => 
-      chat.id === currentChat.id 
-        ? {
-            ...chat,
-            lastMessage: content,
-            lastMessageTime: new Date().toISOString()
-          }
-        : chat
-    ));
-
-    // Simulate seller response after 1 second
-    setTimeout(() => {
-      const sellerResponse: Message = {
+    setLoading(true);
+    try {
+      // Add user message
+      const userMessage: Message = {
         id: Math.random().toString(36).substring(2),
-        senderId: 'seller',
+        senderId: user.id,
+        receiverId: 'ai-assistant',
+        content,
+        timestamp: new Date().toISOString(),
+        isRead: true
+      };
+
+      setMessages(prev => [...prev, userMessage]);
+      
+      // Get AI response
+      const aiResponse = await geminiService.sendMessage(content);
+      
+      // Add AI message
+      const aiMessage: Message = {
+        id: Math.random().toString(36).substring(2),
+        senderId: 'ai-assistant',
         receiverId: user.id,
-        content: "Thank you for your message. Our team will get back to you shortly.",
+        content: aiResponse,
         timestamp: new Date().toISOString(),
         isRead: false
       };
-      setMessages(prev => [...prev, sellerResponse]);
-      
+
+      setMessages(prev => [...prev, aiMessage]);
+
+      // Update chat with last message
       setChats(prev => prev.map(chat => 
-        chat.id === currentChat.id 
+        chat.id === currentChat.id
           ? {
               ...chat,
-              lastMessage: sellerResponse.content,
-              lastMessageTime: sellerResponse.timestamp,
+              lastMessage: aiResponse,
+              lastMessageTime: new Date().toISOString(),
               unreadCount: chat.unreadCount + 1
             }
           : chat
       ));
-    }, 1000);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: Math.random().toString(36).substring(2),
+        senderId: 'ai-assistant',
+        receiverId: user.id,
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date().toISOString(),
+        isRead: false
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const markAsRead = (chatId: string) => {
@@ -120,6 +131,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const startNewChat = () => {
     if (!user) return;
+
+    // Clear Gemini chat history when starting a new chat
+    geminiService.clearHistory();
 
     const newChat: Chat = {
       id: Math.random().toString(36).substring(2),
@@ -143,6 +157,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ));
   };
 
+  const deleteChat = (chatId: string) => {
+    // Remove the chat
+    setChats(prev => prev.filter(chat => chat.id !== chatId));
+    
+    // If the deleted chat was the current chat, set currentChat to null
+    if (currentChat?.id === chatId) {
+      setCurrentChat(null);
+    }
+    
+    // Remove all messages associated with this chat
+    setMessages(prev => prev.filter(message => 
+      !(message.senderId === currentChat?.customerId || message.receiverId === currentChat?.customerId)
+    ));
+
+    // Clear Gemini chat history if deleting current chat
+    if (currentChat?.id === chatId) {
+      geminiService.clearHistory();
+    }
+  };
+
   return (
     <ChatContext.Provider
       value={{
@@ -153,7 +187,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sendMessage,
         markAsRead,
         startNewChat,
-        resolveChat
+        resolveChat,
+        deleteChat
       }}
     >
       {children}

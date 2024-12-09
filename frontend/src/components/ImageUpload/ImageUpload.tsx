@@ -5,12 +5,16 @@ interface ImageUploadProps {
   onUploadComplete: (imageUrl: string) => void;
   maxImages?: number;
   initialImages?: string[];
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
   onUploadComplete,
   maxImages = 1,
-  initialImages = []
+  initialImages = [],
+  onUploadStart,
+  onUploadEnd
 }) => {
   const [loading, setLoading] = useState(false);
   const [imageList, setImageList] = useState<string[]>(initialImages);
@@ -40,6 +44,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
     setLoading(true);
     setError('');
+    onUploadStart?.();
 
     try {
       const base64Image = await convertImageToBase64(file);
@@ -50,6 +55,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       setError('Failed to process image. Please try again.');
     } finally {
       setLoading(false);
+      onUploadEnd?.();
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -58,6 +64,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const handleRemoveImage = (indexToRemove: number) => {
     setImageList(prevList => prevList.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    fileInputRef.current?.click();
   };
 
   return (
@@ -72,7 +83,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               className="w-full h-full object-cover rounded-lg"
             />
             <button
-              onClick={() => handleRemoveImage(index)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                handleRemoveImage(index);
+              }}
               className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             >
               ×
@@ -85,7 +100,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {imageList.length < maxImages && (
         <div className="w-full">
           <button
-            onClick={() => fileInputRef.current?.click()}
+            type="button"
+            onClick={handleButtonClick}
             disabled={loading}
             className={`w-full px-4 py-2 border-2 border-dashed rounded-lg 
               ${loading 

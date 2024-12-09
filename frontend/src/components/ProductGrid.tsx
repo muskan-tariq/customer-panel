@@ -6,82 +6,92 @@ import { Product } from '../hooks/useProducts';
 interface ProductGridProps {
   products: Product[];
   viewType?: 'grid4' | 'grid5';
+  isSearchResult?: boolean;
 }
 
-const ProductGrid = ({ products, viewType = 'grid4' }: ProductGridProps) => {
+const ProductGrid = ({ products, viewType = 'grid4', isSearchResult = false }: ProductGridProps) => {
   if (!products || products.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-8">
-        No products found in this category.
+      <div className="text-center text-gray-500 py-8 bg-white">
+        No products found.
       </div>
     );
   }
 
+  const getGridClass = () => {
+    return viewType === 'grid5'
+      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4'
+      : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
+  };
+
   return (
-    <div className="border-t border-gray-200 pt-8">
-      <div className={`grid ${viewType === 'grid4' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5'} gap-4 md:gap-6`}>
-        {products.map((product) => (
-          <Link 
-            key={product._id} 
-            to={`/products/${product.category}/${product._id}`}
-            className="group text-center mb-4 hover:shadow-lg transition-shadow duration-300"
-          >
-            <div className="relative mb-3">
-              {/* Discount Tag */}
-              {product.discount > 0 && (
-                <span className="absolute top-2 left-2 bg-white text-black text-[10px] px-1.5 py-0.5 z-10">
-                  {product.discount}% OFF
-                </span>
-              )}
-              
-              {/* Product Tag */}
-              {product.tag && (
-                <span className="absolute top-2 right-2 bg-[#FF66C4] text-white text-[10px] px-1.5 py-0.5 z-10">
-                  {product.tag}
-                </span>
-              )}
+    <div className={`grid ${getGridClass()} bg-white`}>
+      {products.map((product) => (
+        <Link 
+          key={product._id} 
+          to={`/products/${product.category}/${product._id}`}
+          className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+        >
+          {/* Product Image */}
+          <div className="relative aspect-square">
+            {/* Discount Tag */}
+            {product.discount > 0 && (
+              <span className="absolute top-2 left-2 bg-white text-black text-xs px-2 py-1 rounded-full z-10">
+                {product.discount}% OFF
+              </span>
+            )}
+            
+            {/* Product Tag */}
+            {product.tag && (
+              <span className="absolute top-2 right-2 bg-[#FF66C4] text-white text-xs px-2 py-1 rounded-full z-10">
+                {product.tag}
+              </span>
+            )}
 
-              {/* Product Image */}
-              <div className="aspect-square w-full overflow-hidden max-w-[230px] mx-auto">
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            </div>
+            <img
+              src={product.images[0]}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
 
-            <h3 className="text-sm font-medium mb-1 group-hover:text-[#FF66C4] px-2 text-[#333333]">
+          {/* Product Info */}
+          <div className="p-4 bg-white">
+            <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
               {product.name}
             </h3>
 
-            <div className="flex items-center justify-center gap-3 mb-1">
-              <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-1 mb-2">
+              <div className="flex">
                 {[...Array(5)].map((_, i) => (
-                  <Star 
+                  <Star
                     key={i}
-                    className={`h-2.5 w-2.5 ${
+                    className={`w-3.5 h-3.5 ${
                       i < Math.floor(product.rating)
-                        ? 'fill-[#F6A429] text-[#F6A429]'
-                        : 'fill-gray-200 text-gray-200'
-                    } stroke-[1.5]`}
+                        ? 'text-yellow-400 fill-yellow-400'
+                        : 'text-gray-200 fill-gray-200'
+                    }`}
                   />
                 ))}
               </div>
-              <span className="text-xs text-gray-500">({product.numReviews} reviews)</span>
+              <span className="text-xs text-gray-500">
+                ({product.numReviews})
+              </span>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <span className="font-medium text-[#E31837]">₱{product.price.toLocaleString()}</span>
-              {product.originalPrice && (
-                <span className="text-gray-400 line-through">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-900">
+                ₱{product.price.toLocaleString()}
+              </span>
+              {product.originalPrice && product.originalPrice > product.price && (
+                <span className="text-xs text-gray-500 line-through">
                   ₱{product.originalPrice.toLocaleString()}
                 </span>
               )}
             </div>
-          </Link>
-        ))}
-      </div>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Grid, Grid3x3, Filter } from 'lucide-react';
 import ProductGrid from '../../components/ProductGrid';
 import Pagination from '../../components/Pagination';
-import { useProducts } from '../../hooks/useProducts';
+import { useProducts, FilterOptions } from '../../hooks/useProducts';
 import FilterSidebar from './components/FilterSidebar';
 import SortDropdown from '../Moisturizer/components/SortDropdown';
 
@@ -17,16 +17,16 @@ const BestSellersPage = () => {
     setPage, 
     applyFilters,
     filterOptions,
-    sortProducts 
+    sortOptions 
   } = useProducts('best-sellers');
 
-  const handleApplyFilters = (filters: any) => {
+  const handleApplyFilters = (filters: FilterOptions) => {
     applyFilters(filters);
     setIsFilterOpen(false);
   };
 
   const handleSort = (sortBy: string) => {
-    sortProducts(sortBy);
+    applyFilters({ sortBy });
   };
 
   return (
@@ -99,6 +99,7 @@ const BestSellersPage = () => {
                 <FilterSidebar 
                   onApply={handleApplyFilters}
                   filterOptions={filterOptions}
+                  sortOptions={sortOptions}
                 />
               </div>
             </div>

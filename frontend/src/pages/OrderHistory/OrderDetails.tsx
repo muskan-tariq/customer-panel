@@ -1,28 +1,59 @@
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FileDown, Package, Truck, Calendar, CheckCircle, ArrowLeft } from 'lucide-react';
-import { useCart } from '../Cart/CartContext';
+import { useOrder } from '../../contexts/OrderContext';
 
 const OrderDetails = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const { orders } = useCart();
+  const { getOrderById, downloadInvoice } = useOrder();
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Find the specific order
-  const order = orders.find(o => o.id === orderId);
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        setLoading(true);
+        const orderData = await getOrderById(orderId!);
+        setOrder(orderData);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch order details');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  console.log('OrderDetails - orderId:', orderId);
-  console.log('OrderDetails - orders:', orders);
-  console.log('OrderDetails - found order:', order);
+    if (orderId) {
+      fetchOrder();
+    }
+  }, [orderId, getOrderById]);
 
-  if (!order) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF66C4] mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !order) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h1 className="text-2xl font-medium text-gray-900 mb-2">Order Not Found</h1>
-            <p className="text-gray-500 mb-8">The order you're looking for doesn't exist.</p>
+            <h1 className="text-2xl font-medium text-gray-900 mb-2">
+              {error || 'Order Not Found'}
+            </h1>
+            <p className="text-gray-500 mb-8">
+              {error ? 'Please try again later.' : "The order you're looking for doesn't exist."}
+            </p>
             <Link
               to="/orders"
               className="inline-flex items-center justify-center px-6 py-3 bg-[#FF66C4] text-white rounded-md hover:bg-[#ff4db7] transition-colors"
@@ -35,10 +66,45 @@ const OrderDetails = () => {
     );
   }
 
-  const handleDownloadInvoice = () => {
-    // Implement invoice download logic
-    console.log('Downloading invoice...');
+  const handleDownloadInvoice = async () => {
+    try {
+      await downloadInvoice(orderId!);
+    } catch (err: any) {
+      console.error('Download invoice error:', err);
+      // You could add a toast notification here
+    }
   };
+
+  // Get the order creation date
+  const orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
+  
+  // Calculate processing and shipping dates
+  const processingDate = new Date(orderDate.getTime());
+  processingDate.setDate(processingDate.getDate() + 1);
+  
+  const shippingDate = new Date(orderDate.getTime());
+  shippingDate.setDate(shippingDate.getDate() + 2);
+
+  const orderTimeline = [
+    {
+      status: "Order Placed",
+      date: orderDate,
+      icon: <CheckCircle className="w-5 h-5 text-[#FF66C4]" />,
+      isCompleted: true
+    },
+    {
+      status: "Processing",
+      date: processingDate,
+      icon: <Package className="w-5 h-5 text-[#FF66C4]" />,
+      isCompleted: order.orderStatus !== 'processing'
+    },
+    {
+      status: "Shipped",
+      date: shippingDate,
+      icon: <Truck className="w-5 h-5 text-[#FF66C4]" />,
+      isCompleted: order.orderStatus === 'delivered'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] py-12">
@@ -68,37 +134,18 @@ const OrderDetails = () => {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-sm font-medium text-gray-900">Order #{order.id}</h2>
-                <p className="text-sm text-gray-500">{new Date(order.date).toLocaleDateString()}</p>
+                <h2 className="text-sm font-medium text-gray-900">Order #{order._id}</h2>
+                <p className="text-sm text-gray-500">{orderDate.toLocaleDateString()}</p>
               </div>
               <div className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium capitalize">
-                {order.status}
+                {order.orderStatus}
               </div>
             </div>
 
             {/* Timeline */}
             <div className="relative pb-8">
               <div className="absolute left-8 top-0 h-full w-0.5 bg-gray-200"></div>
-              {[
-                {
-                  status: "Order Placed",
-                  date: order.date,
-                  icon: <CheckCircle className="w-5 h-5 text-[#FF66C4]" />,
-                  isCompleted: true
-                },
-                {
-                  status: "Processing",
-                  date: new Date(new Date(order.date).getTime() + 24 * 60 * 60 * 1000).toISOString(),
-                  icon: <Package className="w-5 h-5 text-[#FF66C4]" />,
-                  isCompleted: order.status !== 'processing'
-                },
-                {
-                  status: "Shipped",
-                  date: new Date(new Date(order.date).getTime() + 48 * 60 * 60 * 1000).toISOString(),
-                  icon: <Truck className="w-5 h-5 text-[#FF66C4]" />,
-                  isCompleted: order.status === 'delivered'
-                }
-              ].map((event, index, array) => (
+              {orderTimeline.map((event, index, array) => (
                 <div key={event.status} className="flex items-start mb-6 last:mb-0">
                   <div className="relative">
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
@@ -114,7 +161,7 @@ const OrderDetails = () => {
                   </div>
                   <div className="ml-4 flex-1">
                     <h3 className="text-base font-medium text-gray-900">{event.status}</h3>
-                    <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString()}</p>
+                    <p className="text-sm text-gray-500">{event.date.toLocaleDateString()}</p>
                   </div>
                 </div>
               ))}
@@ -129,15 +176,15 @@ const OrderDetails = () => {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Order Items</h3>
                 <div className="space-y-4">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4">
+                  {order.items.map((item: any) => (
+                    <div key={item._id} className="flex items-center gap-4">
                       <img
-                        src={item.image}
-                        alt={item.name}
+                        src={item.product.images[0]}
+                        alt={item.product.name}
                         className="w-16 h-16 object-cover rounded-md"
                       />
                       <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900">{item.name}</h4>
+                        <h4 className="text-sm font-medium text-gray-900">{item.product.name}</h4>
                         <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                       </div>
                       <span className="text-sm font-medium">
@@ -169,12 +216,11 @@ const OrderDetails = () => {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Shipping Information</h3>
                 <div className="space-y-2 text-sm">
-                  <p className="font-medium text-gray-900">{order.shippingAddress.name}</p>
-                  <p className="text-gray-600">{order.shippingAddress.address}</p>
+                  <p className="text-gray-600">{order.shippingAddress.street}</p>
                   <p className="text-gray-600">
-                    {order.shippingAddress.city}, {order.shippingAddress.postalCode}
+                    {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
                   </p>
-                  <p className="text-gray-600">{order.shippingAddress.phone}</p>
+                  <p className="text-gray-600">{order.shippingAddress.country}</p>
                 </div>
               </div>
 

@@ -97,9 +97,19 @@ const Checkout = () => {
       setLoading(true);
       setError('');
 
+      // Validate cart items
+      if (!items || items.length === 0) {
+        throw new Error('Your cart is empty');
+      }
+
+      // Validate shipping address
+      if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
+        throw new Error('Please complete your shipping address');
+      }
+
       if (paymentMethod === 'online') {
         if (!stripe || !elements) {
-          throw new Error('Stripe not loaded');
+          throw new Error('Payment system is not ready. Please try again.');
         }
 
         // Create order first
@@ -112,7 +122,7 @@ const Checkout = () => {
         const { data: { clientSecret } } = await axios.post(
           `${API_URL}/payment/create-payment-intent`,
           {
-            orderId: order.id,
+            orderId: order._id,
             amount: total + 100 // total + delivery fee
           },
           {
@@ -121,11 +131,16 @@ const Checkout = () => {
         );
 
         // Confirm card payment
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          throw new Error('Card information is missing');
+        }
+
         const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
           clientSecret,
           {
             payment_method: {
-              card: elements.getElement(CardElement)!,
+              card: cardElement,
             }
           }
         );
@@ -139,7 +154,7 @@ const Checkout = () => {
           `${API_URL}/payment/confirm-payment`,
           {
             paymentIntentId: paymentIntent.id,
-            orderId: order.id
+            orderId: order._id
           },
           {
             headers: { Authorization: `Bearer ${token}` }
@@ -147,18 +162,24 @@ const Checkout = () => {
         );
 
         await clearCart();
-        navigate(`/payment/success/${order.id}`);
+        navigate(`/order-confirmation/${order._id}`);
       } else {
         // Handle COD
         const order = await createOrder({
           shippingAddress,
           paymentMethod
         });
+        
+        if (!order) {
+          throw new Error('Failed to create order. Please try again.');
+        }
+
         await clearCart();
-        navigate(`/order-success/${order.id}`);
+        navigate(`/order-confirmation/${order._id}`);
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error('Checkout error:', err);
+      setError(err.response?.data?.message || err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

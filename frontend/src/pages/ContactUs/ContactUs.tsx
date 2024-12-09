@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Clock, Send, Facebook, Instagram, Twitter } from 'lucide-react';
 import { useState } from 'react';
+import emailService from '../../services/emailService';
+import { toast } from 'react-hot-toast';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -9,10 +11,22 @@ const ContactUs = () => {
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
+    setIsSubmitting(true);
+
+    try {
+      await emailService.sendContactEmail(formData);
+      toast.success('Message sent successfully! We will get back to you soon.');
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -117,11 +131,12 @@ const ContactUs = () => {
 
               <motion.button
                 type="submit"
-                className="w-full bg-[#FF66C4] text-white py-3 rounded-md hover:bg-[#ff4db7] transition-colors flex items-center justify-center gap-2 font-[450]"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className="w-full bg-[#FF66C4] text-white py-3 rounded-md hover:bg-[#ff4db7] transition-colors flex items-center justify-center gap-2 font-[450] disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                disabled={isSubmitting}
               >
-                Send Message
+                {isSubmitting ? 'Sending...' : 'Send Message'}
                 <Send className="w-4 h-4" />
               </motion.button>
             </form>

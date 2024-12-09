@@ -18,6 +18,11 @@ router.get('/', auth, orderController.getUserOrders);
 // @access  Private
 router.get('/:id', auth, orderController.getOrderById);
 
+// @route   GET /api/orders/:id/invoice
+// @desc    Get order invoice
+// @access  Private
+router.get('/:id/invoice', auth, orderController.getOrderInvoice);
+
 // @route   PUT /api/orders/:id/pay
 // @desc    Update order to paid
 // @access  Private
